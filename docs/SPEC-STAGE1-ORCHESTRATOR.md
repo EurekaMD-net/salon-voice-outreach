@@ -25,19 +25,28 @@ first dial. Uncaptured calls are lost forever; an unguarded dialer repeats the g
 
 ---
 
-## 1. Service shape (recommendation + open-Q assumptions)
+## 1. Service shape — DECISIONS LOCKED 2026-06-17
 
-A **separate Python (FastAPI) service** — `orchestrator/` — co-located with pipesong,
-**sharing pipesong's Postgres instance** but in its **own schema** (`outreach`). Rationale:
-same language, loopback webhooks (low latency + HMAC), and SQL joins on `pipesong_call_id`.
-Keep pipesong a clean voice engine; the orchestrator owns who/when/next.
+The entire **proprietary stack we build is TypeScript** (very-light methodology: Hono +
+SQLite + heavy tests + minimal deps). **pipesong is the lone Python commodity, touched
+ONLY over HTTP** — so the orchestrator does not need to be Python; co-location was the only
+reason and it's a weak one. One language for L1–L4 matches the TS-runtime principle and the
+vlcrm.
 
-**Assumptions pending your answers (confirm or override):**
-
-- **GPU:** reuse pipesong's existing RTX-4090 for the pilot → Stage 1 concurrency cap **≤3**.
-- **Telnyx:** one account for **voice + MX SMS** (single vendor, simplest).
-- **Placement:** own service (above). The agentic-CRM is wiped/undeployed, so for Stage 1
-  the orchestrator's own tables are the **system of record**; CRM sync is a later wiring.
+- **Orchestrator** — `orchestrator/` — **TypeScript / Hono + better-sqlite3**, its **own
+  SQLite store** (`data/orchestrator.db`). It references `pipesong_call_id` and stores the
+  webhook **raw payload (incl. transcript)** for the Stage-2 corpus; recordings stay
+  referenced in pipesong's MinIO. No shared Postgres — pipesong is HTTP-only.
+- **vlcrm** — `vlcrm/` — **TypeScript / Hono + SQLite** (same methodology), the pipeline of
+  record + human workspace + CPQL. Consumes lifecycle events from the orchestrator over a
+  thin idempotent HTTP seam. (See ARCHITECTURE for the seam contract.)
+- **GPU:** reuse pipesong's RTX-4090 for the minimum-stack test → Stage 1 concurrency cap
+  **≤3**; dedicated GPU at scale (Stage 3).
+- **Telnyx:** **single vendor** for voice **+** MX SMS, but the SMS leg sits behind a
+  **swappable `send_sms()` adapter**; measure MX deliverability (DLR) in Stage 1; start MX
+  A2P registration early. Swap to a specialist if deliverability underperforms.
+- **System of record (Stage 1):** orchestrator SQLite for dialing/capture; vlcrm SQLite for
+  the lead pipeline. (No media CRM — that stack is for TV/media, different flows.)
 - **Handoff target:** the salones-wa **brand WhatsApp number** (inbound) = the `wa.me` link.
 
 ---
@@ -269,8 +278,14 @@ ALERT_TELEGRAM_BOT_TOKEN=… / ALERT_TELEGRAM_CHAT_ID=…
 
 ---
 
-## 13. Open questions (carried from ARCHITECTURE)
+## 13. Open questions — RESOLVED 2026-06-17
 
-GPU (reuse pipesong's for pilot? assumed yes) · one Telnyx account for voice+SMS (assumed
-yes) · orchestrator placement (own service assumed) · MX DID acquisition (a real step —
-today's DID is US; pilot a few live MX calls first, Twilio fallback).
+- GPU → **reuse pipesong's 4090 for the pilot; dedicated at scale.** ✓
+- Telnyx → **single vendor (voice + MX SMS), SMS behind a swappable adapter.** ✓
+- Orchestrator language/placement → **TypeScript, in-repo `orchestrator/`, own SQLite,
+  pipesong HTTP-only.** ✓
+- CRM → **new in-repo `vlcrm/` (TS/Hono+SQLite, very-light); the media CRM is out of scope.** ✓
+
+**Still open (real work, not decisions):** MX A2P SMS registration (lead-time — start now)
+and acquiring MX local DID(s) — today's pipesong DID is US; pilot a few live MX calls first,
+Twilio as the SMS/voice fallback.

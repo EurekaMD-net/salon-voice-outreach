@@ -39,7 +39,7 @@ We are not building voice. We are building an **orchestrator that drives pipeson
 ## 2. End-to-end architecture
 
 ```
-DENUE 23k spine ──load──▶ Orchestrator (NEW, Python, shares pipesong's Postgres)
+DENUE 23k spine ──load──▶ Orchestrator (NEW, TypeScript/Hono + own SQLite)
 (name, colonia,            │  • dedupe + E.164 validate + DNC filter
  phone, IG)                │  • pacing loop: window + concurrency + retry/backoff
                            │  • per-prospect frequency cap
@@ -69,9 +69,10 @@ DENUE 23k spine ──load──▶ Orchestrator (NEW, Python, shares pipesong's
 
 ## 3. The orchestrator — the main build
 
-A **separate** thin Python service (keep pipesong a clean single-purpose engine;
-the orchestrator owns "who/when/next" — same separation as gilda's sender-vs-analyst
-split). Core = a per-prospect **state machine** + a **pacing loop**.
+A **separate** thin **TypeScript/Hono + SQLite** service (very-light methodology; keep
+pipesong a clean single-purpose engine; the orchestrator owns "who/when/next" — same
+separation as gilda's sender-vs-analyst split). pipesong is HTTP-only. Core = a
+per-prospect **state machine** + a **pacing loop**.
 
 **State machine**
 
