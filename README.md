@@ -36,6 +36,9 @@ banned on the first send. That lesson is the founding constraint of this repo �
 
 ## Docs
 
+- [`docs/VISION.md`](docs/VISION.md) — **start here.** Where the moat is (the data
+  flywheel, not pipesong), the 6-layer stack, how intent/data thread up and down, and
+  the 3 build stages (Pipe → Loop → Flywheel) with what comes first.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full system design (orchestrator,
   conversation flow, data model, compliance-by-design, telephony, cost, phased build).
 - [`docs/PIPESONG-NOTES.md`](docs/PIPESONG-NOTES.md) — the voice engine's real contract,

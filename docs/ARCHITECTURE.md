@@ -176,6 +176,10 @@ it has answer-rate decay + complaints + legal hours — same idea:
 
 ## 8. Phased build (wedge-first)
 
+> Canonical sequencing lives in [`VISION.md §4`](VISION.md) (Pipe → Loop → Flywheel).
+> The P1–P4 below are the substeps: Stage 1 ≈ P1+P2+P3, Stage 3 ≈ P4; Stage 2 (the
+> feedback loop / moat) is the layer VISION makes explicit.
+
 1. **P1 — MX number + 1 agent + handoff tool.** Salon-opener agent on an MX DID;
    wire `send_whatsapp_optin` → SMS `wa.me`. Manual single calls, end-to-end.
 2. **P2 — Orchestrator MVP.** State machine + pacing + DNC + window + webhook→CRM.
