@@ -132,6 +132,28 @@ describe("vlcrm HTTP app", () => {
     expect(res.status).toBe(404);
   });
 
+  it("GET /metrics/cpql returns the rollup", async () => {
+    const app = createApp(db);
+    await app.request(
+      "/events",
+      json({
+        accountKey: "a",
+        channel: "voice",
+        direction: "outbound",
+        type: "qualified",
+        costCents: 100,
+        qualification: { interested: true },
+      }),
+    );
+    const res = await app.request("/metrics/cpql");
+    expect(res.status).toBe(200);
+    const r = (await res.json()) as {
+      overall: { qualified: number; cpqlCents: number | null };
+    };
+    expect(r.overall.qualified).toBe(1);
+    expect(r.overall.cpqlCents).toBe(100);
+  });
+
   describe("bearer guard (apiKey set)", () => {
     const KEY = "s3cret-key-at-least-16-chars";
     it("rejects mutating routes without / with a wrong bearer (401)", async () => {
@@ -148,6 +170,12 @@ describe("vlcrm HTTP app", () => {
     it("gates the /accounts/:key PII read too (401 without auth)", async () => {
       const app = createApp(db, { apiKey: KEY });
       const res = await app.request("/accounts/anything");
+      expect(res.status).toBe(401);
+    });
+
+    it("gates /metrics/cpql (business-sensitive aggregates) (401)", async () => {
+      const app = createApp(db, { apiKey: KEY });
+      const res = await app.request("/metrics/cpql");
       expect(res.status).toBe(401);
     });
 

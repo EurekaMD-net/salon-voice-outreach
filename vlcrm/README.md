@@ -54,24 +54,30 @@ resolves) OR free text (`name`/`phone`) — never both. The FK wins when it reso
 
 ## HTTP routes
 
-| Method | Path             | Purpose                                                                  |
-| ------ | ---------------- | ------------------------------------------------------------------------ |
-| GET    | `/healthz`       | liveness                                                                 |
-| POST   | `/events`        | the agnostic port — ingest a raw `LeadEvent` (orchestrator, closer, web) |
-| POST   | `/leads/intake`  | operator **sales-phone manual intake** with a `referredBy*` field        |
-| GET    | `/accounts/:key` | read an account + interactions + latest qualification                    |
+| Method | Path             | Purpose                                                                           |
+| ------ | ---------------- | --------------------------------------------------------------------------------- |
+| GET    | `/healthz`       | liveness                                                                          |
+| POST   | `/events`        | the agnostic port — ingest a raw `LeadEvent` (orchestrator, closer, web)          |
+| POST   | `/leads/intake`  | operator **sales-phone manual intake** with a `referredBy*` field                 |
+| GET    | `/accounts/:key` | read an account + interactions + latest qualification                             |
+| GET    | `/metrics/cpql`  | **CPQL rollup** — cost-per-qualified-lead + cost-by-channel + qualified-by-source |
 
-All mutating routes **and** the `/accounts` PII read sit behind an optional bearer
-guard (`AppOptions.apiKey`, constant-time compare). A present-but-blank/short key
-throws at construction — the service never boots open by misconfiguration.
-`/healthz` stays open.
+All mutating routes **and** the `/accounts` PII read **and** `/metrics` (business-
+sensitive aggregates) sit behind an optional bearer guard (`AppOptions.apiKey`,
+constant-time compare). A present-but-blank/short key throws at construction — the
+service never boots open by misconfiguration. `/healthz` stays open.
+
+**CPQL** = total interaction spend ÷ distinct accounts with an explicit
+`interested=1` verdict (the qualification table, _not_ the coarse pipeline stage —
+so a no-answer that advanced to "contacted" never inflates the denominator).
+`cpqlCents` is `null` when there are no qualified leads.
 
 ## Run
 
 ```bash
 npm install
 npm run typecheck      # tsc --noEmit
-npx vitest run test/   # 47 tests
+npx vitest run test/   # 56 tests
 ```
 
 > Status: Stage 1 increment 1. No server entrypoint / deploy yet (no listener;

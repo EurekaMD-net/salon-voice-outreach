@@ -75,8 +75,8 @@ export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
       db.prepare(
         `INSERT INTO account
            (id, account_key, name, source,
-            referred_by_account_id, referred_by_name, referred_by_phone)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            referred_by_account_id, referred_by_name, referred_by_phone, attributes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         accountId,
         event.accountKey,
@@ -85,6 +85,9 @@ export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
         referredByAccountId,
         referredByName,
         referredByPhone,
+        event.attributes !== undefined
+          ? JSON.stringify(event.attributes)
+          : null,
       );
     }
 

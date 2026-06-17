@@ -76,4 +76,13 @@ describe("validateLeadEvent — the fail-closed ingest boundary", () => {
     expect(ev.referredBy?.name).toBe("Pedro");
     expect(ev.contact?.role).toBe("Dueña");
   });
+
+  it("rejects non-object attributes, passes an object through", () => {
+    expect(() => validateLeadEvent({ ...base, attributes: "nope" })).toThrow(
+      /attributes/,
+    );
+    expect(
+      validateLeadEvent({ ...base, attributes: { colonia: "X" } }).attributes,
+    ).toEqual({ colonia: "X" });
+  });
 });

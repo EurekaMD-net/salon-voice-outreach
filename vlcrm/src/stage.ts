@@ -45,6 +45,8 @@ export function impliedStage(eventType: string): PipelineStage | null {
   switch (eventType) {
     case "referral": // logged referral, not yet contacted
       return "new";
+    case "call_attempt": // an outbound try with NO human reached (no_answer/
+      return null; //       voicemail/failed) — logged, but never counts as contact
     case "manual_intake": // a human captured them via the sales phone
     case "call":
     case "contacted":

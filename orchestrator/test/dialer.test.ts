@@ -25,6 +25,10 @@ function cfg(o: Partial<Config> = {}): Config {
     stuckDialingMinutes: 15,
     answerRateFloor: 0.1,
     dbPath: ":memory:",
+    voiceCostPerMinuteCents: 3,
+    crmSyncBatch: 100,
+    crmBaseUrl: null,
+    crmApiKey: null,
     ...o,
   };
 }

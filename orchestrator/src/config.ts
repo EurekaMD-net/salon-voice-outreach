@@ -37,6 +37,14 @@ export interface Config {
   answerRateFloor: number;
   /** SQLite path. */
   dbPath: string;
+  /** Per-minute voice cost in cents, used to value call_attempts for CPQL. */
+  voiceCostPerMinuteCents: number;
+  /** Max lead events drained to the CRM per sync run. */
+  crmSyncBatch: number;
+  /** vlcrm base URL for the HTTP CRM client (null → CRM sync not wired/disabled). */
+  crmBaseUrl: string | null;
+  /** Bearer key for vlcrm; must match vlcrm's apiKey (≥16 chars) if present. */
+  crmApiKey: string | null;
 }
 
 interface NumOpts {
@@ -153,5 +161,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }),
     answerRateFloor,
     dbPath: env["ORCHESTRATOR_DB"] ?? "./data/orchestrator.db",
+    voiceCostPerMinuteCents: numEnv(env, "VOICE_COST_PER_MINUTE_CENTS", 3, {
+      min: 0,
+      max: 100000,
+    }),
+    crmSyncBatch: numEnv(env, "CRM_SYNC_BATCH", 100, { min: 1, max: 10000 }),
+    crmBaseUrl: nonEmptyOrNull(env["CRM_BASE_URL"]),
+    crmApiKey: (() => {
+      const key = nonEmptyOrNull(env["CRM_API_KEY"]);
+      // Fail closed: a present-but-short key would only surface as a vlcrm 401 at
+      // runtime. vlcrm requires ≥16 chars — reject the mismatch at load instead.
+      if (key !== null && key.length < 16)
+        throw new Error("config: CRM_API_KEY must be at least 16 chars");
+      return key;
+    })(),
   };
+}
+
+/** Trim → null if empty/absent, else the trimmed value. */
+function nonEmptyOrNull(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const t = raw.trim();
+  return t === "" ? null : t;
 }

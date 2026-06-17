@@ -68,6 +68,31 @@ describe("loadConfig — fail-closed numeric caps (QA H2)", () => {
   });
 });
 
+describe("loadConfig — CRM sync config (fail-closed)", () => {
+  it("defaults: cost 3¢/min, batch 100, no CRM URL/key", () => {
+    const c = loadConfig({});
+    expect(c.voiceCostPerMinuteCents).toBe(3);
+    expect(c.crmSyncBatch).toBe(100);
+    expect(c.crmBaseUrl).toBeNull();
+    expect(c.crmApiKey).toBeNull();
+  });
+  it("rejects a present-but-short CRM_API_KEY (would only 401 at runtime)", () => {
+    expect(() => loadConfig({ CRM_API_KEY: "short" })).toThrow(/CRM_API_KEY/);
+  });
+  it("accepts a ≥16-char CRM_API_KEY and trims a blank to null", () => {
+    expect(loadConfig({ CRM_API_KEY: "this-is-16-chars!" }).crmApiKey).toBe(
+      "this-is-16-chars!",
+    );
+    expect(loadConfig({ CRM_API_KEY: "   " }).crmApiKey).toBeNull();
+  });
+  it("rejects a non-integer / negative voice cost", () => {
+    expect(() => loadConfig({ VOICE_COST_PER_MINUTE_CENTS: "-1" })).toThrow(
+      /VOICE_COST_PER_MINUTE_CENTS/,
+    );
+    expect(() => loadConfig({ CRM_SYNC_BATCH: "0" })).toThrow(/CRM_SYNC_BATCH/);
+  });
+});
+
 describe("loadConfig — window guard (QA M1)", () => {
   it("rejects an inverted window instead of silently never-dialing", () => {
     expect(() =>

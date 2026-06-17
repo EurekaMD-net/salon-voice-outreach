@@ -53,6 +53,9 @@ export interface LeadEvent {
   costCents?: number;
   refId?: string;
   payload?: unknown;
+  /** account-level vertical bag (e.g. {colonia, scian}) — written set-once on
+   *  account creation, NOT per interaction. */
+  attributes?: Record<string, unknown>;
   qualification?: LeadEventQualification;
 }
 
@@ -158,6 +161,12 @@ export function validateLeadEvent(input: unknown): LeadEvent {
   const outcome = optStr(input.outcome, "outcome");
   if (outcome !== undefined) event.outcome = outcome;
   if (input.payload !== undefined) event.payload = input.payload;
+
+  if (input.attributes !== undefined && input.attributes !== null) {
+    if (!isObj(input.attributes))
+      throw new LeadEventError("attributes must be an object");
+    event.attributes = input.attributes;
+  }
 
   if (input.contact !== undefined && input.contact !== null) {
     if (!isObj(input.contact))

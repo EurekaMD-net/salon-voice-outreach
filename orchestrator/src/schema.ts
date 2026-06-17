@@ -49,10 +49,16 @@ CREATE TABLE IF NOT EXISTS call_attempt (
   optin_sent       INTEGER NOT NULL DEFAULT 0 CHECK (optin_sent IN (0,1)),
   transcript_ref   TEXT,
   recording_ref    TEXT,
-  raw              TEXT
+  raw              TEXT,
+  -- CRM outbox marker: NULL until this finalized attempt has been emitted to
+  -- vlcrm (see crm-sync.ts). The table doubles as the lead-event outbox.
+  crm_synced_at    TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_call_prospect
   ON call_attempt(prospect_id, started_at DESC);
+-- drains the outbox: finalized attempts not yet pushed to the CRM.
+CREATE INDEX IF NOT EXISTS ix_call_crm_unsynced
+  ON call_attempt(crm_synced_at) WHERE disposition IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS dnc (
   phone_e164  TEXT PRIMARY KEY,

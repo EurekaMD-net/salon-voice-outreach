@@ -5,12 +5,15 @@ salon / barber / nail owners at scale and routing interested owners into the
 **inbound** WhatsApp funnel that closes them.
 
 > **Status (2026-06-17):** design complete; **build underway**.
-> **Orchestrator Stage 1** — capture spine + fail-closed guardrails/kill-switch (inc 1)
-> and the pipesong-agnostic dialer core (inc 2: `PipesongClient` port + state machine +
-> pacing loop + stuck-dialing reaper) — shipped & QA-gated, **67 tests**.
-> **vlcrm Stage 1 inc 1** — the lead-intake spine: 4-table pipeline of record, the
-> agnostic `LeadEvent` ingest port, and the operator sales-phone manual-intake route with
-> structured **referral** capture — shipped & QA-gated, **47 tests**.
+> **Orchestrator Stage 1** — capture spine + fail-closed guardrails/kill-switch, the
+> pipesong-agnostic dialer core (`PipesongClient` port + state machine + pacing loop +
+> reaper), and the **CRM emitter** (`CrmClient` port + outbox pump: every finalized
+> `call_attempt` drains to vlcrm at-least-once) — shipped & QA-gated, **93 tests**.
+> **vlcrm Stage 1** — the lead-intake spine (4-table pipeline of record, agnostic
+> `LeadEvent` ingest port, sales-phone manual intake with structured **referral**), plus
+> the **CPQL rollup** (`GET /metrics/cpql`: cost-per-qualified-lead + cost-by-channel +
+> qualified-by-source) — shipped & QA-gated, **56 tests**.
+> **The two services now talk** (orchestrator → `LeadEvent` → vlcrm → CPQL), all in-repo.
 > The pipesong-coupled parts (webhook→outcome handler, agent registration + handoff) wait
 > for the in-flight pipesong Pipecat-1.x/Flux upgrade to merge to `main` (currently on an
 > unvalidated branch; watched). Private — it touches prospect PII.

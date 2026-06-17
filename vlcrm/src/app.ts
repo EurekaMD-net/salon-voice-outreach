@@ -7,6 +7,7 @@ import {
   type LeadEvent,
 } from "./lead-event.js";
 import { ingestLeadEvent } from "./ingest.js";
+import { computeCpql } from "./cpql.js";
 import { normalizePhone } from "./phone.js";
 import type { Account, Interaction, Qualification } from "./types.js";
 
@@ -88,6 +89,8 @@ export function createApp(db: DB, opts: AppOptions = {}): Hono {
     app.use("/leads/*", guard);
     // /accounts/:key returns PII (names, phones, emails, IG) — gate the read too.
     app.use("/accounts/*", guard);
+    // /metrics exposes business-sensitive aggregates (spend, CPQL) — gate it.
+    app.use("/metrics/*", guard);
   }
 
   app.get("/healthz", (c) => c.json({ ok: true }));
@@ -190,6 +193,8 @@ export function createApp(db: DB, opts: AppOptions = {}): Hono {
       qualification: qualification ?? null,
     });
   });
+
+  app.get("/metrics/cpql", (c) => c.json(computeCpql(db)));
 
   return app;
 }

@@ -208,6 +208,31 @@ describe("ingestLeadEvent", () => {
     expect(r2.occurred_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
   });
 
+  it("writes attributes to the account vertical bag, set-once", () => {
+    ingestLeadEvent(
+      db,
+      salesPhoneLead({ attributes: { colonia: "Centro", scian: "812110" } }),
+    );
+    const a = acct(db, "+5215512345678");
+    expect(JSON.parse(a.attributes!)).toEqual({
+      colonia: "Centro",
+      scian: "812110",
+    });
+    // a later event must not overwrite the vertical bag (set-once provenance)
+    ingestLeadEvent(
+      db,
+      salesPhoneLead({
+        type: "call",
+        channel: "voice",
+        direction: "outbound",
+        attributes: { colonia: "Otra" },
+      }),
+    );
+    expect(JSON.parse(acct(db, "+5215512345678").attributes!).colonia).toBe(
+      "Centro",
+    );
+  });
+
   it("dedups a contact by (account, phone) across events", () => {
     ingestLeadEvent(
       db,
