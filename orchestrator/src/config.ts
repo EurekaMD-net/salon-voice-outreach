@@ -28,8 +28,11 @@ export interface Config {
   maxConcurrentCalls: number;
   /** Per-prospect attempt cap. */
   maxAttempts: number;
-  /** Backoff before re-queueing a no_answer/voicemail. */
+  /** Backoff before re-queueing a no_answer/voicemail (≥1h — never an unpaced retry). */
   retryBackoffHours: number;
+  /** A prospect stuck in `dialing` longer than this is reaped (no webhook ever
+   *  arrived) so it can't permanently leak a concurrency slot. */
+  stuckDialingMinutes: number;
   /** Below this rolling answer-rate the monitor auto-pauses + alerts. */
   answerRateFloor: number;
   /** SQLite path. */
@@ -141,8 +144,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }),
     maxAttempts: numEnv(env, "MAX_ATTEMPTS", 2, { min: 1, max: 10 }),
     retryBackoffHours: numEnv(env, "RETRY_BACKOFF_HOURS", 24, {
-      min: 0,
+      min: 1, // ≥1h: never an unpaced retry against the same number (QA W2)
       max: 720,
+    }),
+    stuckDialingMinutes: numEnv(env, "STUCK_DIALING_MINUTES", 15, {
+      min: 1,
+      max: 240,
     }),
     answerRateFloor,
     dbPath: env["ORCHESTRATOR_DB"] ?? "./data/orchestrator.db",

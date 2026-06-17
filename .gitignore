@@ -31,7 +31,8 @@ venv/
 dist/
 build/
 
-# ── Local / editor ────────────────────────────────────────────────────
+# ── Local / editor / agent state ──────────────────────────────────────
+.claude/
 .DS_Store
 *.log
 .idea/

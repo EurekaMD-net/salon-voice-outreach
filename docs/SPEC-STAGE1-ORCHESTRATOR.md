@@ -228,6 +228,10 @@ channel-tagged, for CPQL) is a thin later wiring once the agentic-CRM is back up
   craters or VM-rate spikes → **auto-pause** (`CAMPAIGN_ENABLED→false`) + alert operator
   (Telegram). **Verify it actually fires** before launch (trace one real tick).
 - **Caller-ID hygiene:** consistent MX DID; monitor answer-rate as the health signal.
+- **Stuck-`dialing` reaper** (`sweepStuckDialing`, run each `tick`): a call that started
+  but whose webhook never arrives is reaped after `STUCK_DIALING_MINUTES` (→ `failed` →
+  requeue/exhaust), so a dropped webhook or pipesong crash can't permanently leak a
+  concurrency slot and silently stall the dialer (QA W1).
 
 ---
 
@@ -259,12 +263,23 @@ ALERT_TELEGRAM_BOT_TOKEN=… / ALERT_TELEGRAM_CHAT_ID=…
 
 ## 11. Build order (capture-first)
 
-1. **Schema + guardrails skeleton** — `outreach` tables, `CAMPAIGN_ENABLED`, window/DNC/
-   freq-cap checks, the answer-rate monitor + kill-switch. (The spine, before any dial.)
-2. **Salon-opener agent + handoff** — register agent; `send_whatsapp_optin`/`mark_dnc`
-   tools; `/handoff/optin` → SMS `wa.me`. Test with a single manual `POST /calls/outbound`.
-3. **Webhook → outcome handler** — HMAC verify, disposition mapping, `raw` capture.
-4. **Pacing loop** — state machine + dialer; run against the 296 within the window.
+**Status (2026-06-17):** re-sequenced to build the pipesong-**agnostic** core first —
+pipesong's contract is in flux in a parallel session, and the agnostic parts carry no
+rework risk. The pipesong-coupled parts (webhook parser, real HTTP adapter, agent
+registration) land last, after the contract re-verifies.
+
+1. ✅ **Schema + config + guardrail functions** (inc 1) — `outreach` tables,
+   `CAMPAIGN_ENABLED` kill-switch (fail-closed config), window/DNC/freq-cap/concurrency
+   gates + `canDial()`. The capture spine, before any dial.
+2. ✅ **Dialer core — agnostic** (inc 2) — `PipesongClient` **port** + fake, state machine
+   (`applyDisposition`), pacing loop `tick()` + `recordDisposition` + stuck-dialing reaper.
+   67 tests, QA-gated SHIP-OK.
+3. ⬜ **Webhook → outcome handler** — HMAC verify, disposition mapping, `raw` capture.
+   _(Re-verify the pipesong contract first — in flux.)_
+4. ⬜ **Salon-opener agent + handoff** — register agent; `send_whatsapp_optin`/`mark_dnc`
+   tools; `/handoff/optin` → SMS `wa.me`. The real `HttpPipesongClient` adapter lands here.
+5. ⬜ **Answer-rate monitor** (§8) — scheduled job, built + verified to actually fire.
+6. ⬜ **vlcrm** — lead-event consumer + CPQL (separate `vlcrm/` service).
 
 ---
 

@@ -20,6 +20,7 @@ function cfg(overrides: Partial<Config> = {}): Config {
     maxConcurrentCalls: 3,
     maxAttempts: 2,
     retryBackoffHours: 24,
+    stuckDialingMinutes: 15,
     answerRateFloor: 0.1,
     dbPath: ":memory:",
     ...overrides,

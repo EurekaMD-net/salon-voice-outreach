@@ -72,8 +72,11 @@ export interface DialDecision {
 }
 
 /**
- * Single chokepoint: may we dial this prospect now? Combines every gate in
- * priority order. The pacing loop calls this; nothing dials that this rejects.
+ * Per-prospect gate: may we dial this prospect now? Combines, in priority order,
+ * kill-switch → window → DNC → frequency-cap. The remaining eligibility gate —
+ * `next_eligible_at <= now` (retry backoff) — is enforced by the dialer's
+ * selection query (`dialer.ts`), not here, since it's a set-selection filter
+ * rather than a per-row policy. Together the two cover every dial precondition.
  */
 export function canDial(
   db: DB,
