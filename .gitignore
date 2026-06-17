@@ -1,0 +1,33 @@
+# ── Secrets ───────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Prospect data / PII (NEVER commit — this repo is private, keep it that way) ──
+data/
+*.csv
+*.xlsx
+prospects*.json
+recordings/
+*.wav
+*.mp3
+
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# ── Local / editor ────────────────────────────────────────────────────
+.DS_Store
+*.log
+.idea/
+.vscode/
