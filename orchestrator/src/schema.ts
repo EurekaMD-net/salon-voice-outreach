@@ -3,9 +3,15 @@
  * FIRST (SPEC §11), before any dial. `call_attempt.raw` stores the full webhook
  * payload verbatim so Stage 2 can mine data we don't yet know we'll want.
  *
- * SQLite notes: ids are app-generated UUIDs (TEXT); timestamps are ISO-8601 TEXT
- * in UTC (`datetime('now')`); booleans are 0/1; JSON is TEXT. All idempotent
- * (`IF NOT EXISTS`) so migrate() is safe to run on every boot.
+ * SQLite notes: ids are app-generated UUIDs (TEXT); booleans are 0/1; JSON is
+ * TEXT. All idempotent (`IF NOT EXISTS`) so migrate() is safe to run on every boot.
+ *
+ * CANONICAL TIMESTAMP FORMAT (QA M2 — decided 2026-06-17): every timestamp column
+ * is the SQLite `datetime('now')` form — "YYYY-MM-DD HH:MM:SS", UTC, space-separated,
+ * no `T`/`Z`. ALL writes (incl. the increment-4 retry-write of `next_eligible_at`)
+ * MUST use SQL `datetime(...)` (e.g. `datetime('now', '+24 hours')`), NEVER JS
+ * `Date.toISOString()` — mixing the two breaks lexical `ORDER BY` / `<=` comparison
+ * on these TEXT columns (space 0x20 sorts before 'T' 0x54).
  */
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS prospect (

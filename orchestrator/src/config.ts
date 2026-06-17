@@ -2,6 +2,11 @@
  * Config + the campaign kill-switch. CAMPAIGN_ENABLED defaults to FALSE — the
  * dialer never runs unless explicitly turned on (the gilda lesson: safe by
  * default, build the guardrails before the volume).
+ *
+ * FAIL-CLOSED: invalid config throws at load → the service refuses to start.
+ * A typo must never silently *widen* a compliance window or relax a cap
+ * (QA H1/H2/M1). Absent vars fall back to safe defaults; present-but-invalid
+ * vars are a hard error.
  */
 
 export interface WindowCfg {
@@ -31,37 +36,97 @@ export interface Config {
   dbPath: string;
 }
 
-function intEnv(env: NodeJS.ProcessEnv, key: string, dflt: number): number {
+interface NumOpts {
+  min: number;
+  max: number;
+  /** Require an integer (default true). */
+  integer?: boolean;
+}
+
+/**
+ * Read a numeric env var with bounds. Absent → default. Present-but-invalid
+ * (non-numeric, non-integer when required, or out of [min,max]) → throw.
+ */
+function numEnv(
+  env: NodeJS.ProcessEnv,
+  key: string,
+  dflt: number,
+  { min, max, integer = true }: NumOpts,
+): number {
   const raw = env[key];
   if (raw === undefined || raw.trim() === "") return dflt;
   const n = Number(raw);
-  return Number.isFinite(n) ? n : dflt;
+  if (!Number.isFinite(n))
+    throw new Error(`config: ${key}="${raw}" is not a number`);
+  if (integer && !Number.isInteger(n))
+    throw new Error(`config: ${key}="${raw}" must be an integer`);
+  if (n < min || n > max)
+    throw new Error(`config: ${key}=${n} out of range [${min}, ${max}]`);
+  return n;
 }
 
-/** Parse "1-6" / "1,2,3" / "0-6" into a weekday list (0=Sun…6=Sat). */
+/**
+ * Parse "1-6" / "1,2,3" / "0-6" into a weekday list (0=Sun…6=Sat).
+ * Absent → default. Present-but-invalid → throw (fail-closed: a typo must not
+ * silently widen the window to all days).
+ */
 export function parseDays(raw: string | undefined, dflt: number[]): number[] {
-  if (!raw || raw.trim() === "") return dflt;
+  if (raw === undefined || raw.trim() === "") return dflt;
   const out = new Set<number>();
   for (const part of raw.split(",")) {
     const seg = part.trim();
+    if (seg === "") continue;
     if (seg.includes("-")) {
-      const [a, b] = seg.split("-").map((x) => parseInt(x, 10));
-      if (Number.isInteger(a) && Number.isInteger(b)) {
-        for (let d = a!; d <= b!; d++) if (d >= 0 && d <= 6) out.add(d);
+      // Exactly two non-empty bounds. Rejects "-1" (empty lo → Number("")=0),
+      // "1-" (empty hi), "-" and "1-3-5" — all fail-closed.
+      const segParts = seg.split("-");
+      if (segParts.length !== 2 || segParts[0] === "" || segParts[1] === "") {
+        throw new Error(`config: WINDOW_DAYS has invalid range "${seg}"`);
       }
+      const lo = Number(segParts[0]);
+      const hi = Number(segParts[1]);
+      if (
+        !Number.isInteger(lo) ||
+        !Number.isInteger(hi) ||
+        lo < 0 ||
+        hi > 6 ||
+        lo > hi
+      ) {
+        throw new Error(`config: WINDOW_DAYS has invalid range "${seg}"`);
+      }
+      for (let d = lo; d <= hi; d++) out.add(d);
     } else {
-      const d = parseInt(seg, 10);
-      if (Number.isInteger(d) && d >= 0 && d <= 6) out.add(d);
+      const d = Number(seg);
+      if (!Number.isInteger(d) || d < 0 || d > 6) {
+        throw new Error(`config: WINDOW_DAYS has invalid day "${seg}"`);
+      }
+      out.add(d);
     }
   }
-  return out.size > 0 ? [...out].sort((a, b) => a - b) : dflt;
+  if (out.size === 0)
+    throw new Error(`config: WINDOW_DAYS="${raw}" yielded no days`);
+  return [...out].sort((a, b) => a - b);
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const startHour = intEnv(env, "WINDOW_START_HOUR", 10);
-  let endHour = intEnv(env, "WINDOW_END_HOUR", 19);
-  // Guard against an inverted/degenerate window → fall back to defaults.
-  if (endHour <= startHour) endHour = 19;
+  const startHour = numEnv(env, "WINDOW_START_HOUR", 10, { min: 0, max: 23 });
+  const endHour = numEnv(env, "WINDOW_END_HOUR", 19, { min: 1, max: 24 });
+  // Assert the post-coercion invariant (M1: a partial reset left it inverted).
+  if (endHour <= startHour) {
+    throw new Error(
+      `config: WINDOW_END_HOUR (${endHour}) must be greater than WINDOW_START_HOUR (${startHour})`,
+    );
+  }
+
+  const answerRateFloor = (() => {
+    const raw = env["ANSWER_RATE_FLOOR"];
+    if (raw === undefined || raw.trim() === "") return 0.1;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0 || n > 1)
+      throw new Error(`config: ANSWER_RATE_FLOOR="${raw}" must be in [0, 1]`);
+    return n;
+  })();
+
   return {
     campaignEnabled: env["CAMPAIGN_ENABLED"] === "true",
     timezone: env["TZ_OUTREACH"] ?? "America/Mexico_City",
@@ -70,10 +135,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       startHour,
       endHour,
     },
-    maxConcurrentCalls: intEnv(env, "MAX_CONCURRENT_CALLS", 3),
-    maxAttempts: intEnv(env, "MAX_ATTEMPTS", 2),
-    retryBackoffHours: intEnv(env, "RETRY_BACKOFF_HOURS", 24),
-    answerRateFloor: Number(env["ANSWER_RATE_FLOOR"] ?? "0.10"),
+    maxConcurrentCalls: numEnv(env, "MAX_CONCURRENT_CALLS", 3, {
+      min: 1,
+      max: 1000,
+    }),
+    maxAttempts: numEnv(env, "MAX_ATTEMPTS", 2, { min: 1, max: 10 }),
+    retryBackoffHours: numEnv(env, "RETRY_BACKOFF_HOURS", 24, {
+      min: 0,
+      max: 720,
+    }),
+    answerRateFloor,
     dbPath: env["ORCHESTRATOR_DB"] ?? "./data/orchestrator.db",
   };
 }
