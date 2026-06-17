@@ -1,0 +1,21 @@
+{
+  "name": "@salon-voice-outreach/vlcrm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Very-light CRM — pipeline of record + channel attribution for the voice-outreach funnel. Agnostic LeadEvent ingest port; sales-phone manual intake with referral provenance. Stage 1 inc 1.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}
