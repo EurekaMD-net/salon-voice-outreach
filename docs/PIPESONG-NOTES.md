@@ -145,8 +145,12 @@ ExternalUserTurnStrategies())` removes Silero VAD + Smart Turn. EOT tuning =
   `eot_threshold` (0.5-0.9, def 0.7) / `eager_eot_threshold` (faster, more LLM calls/cost) /
   `eot_timeout_ms`. **Orchestrator impact:** for Flux agents these knobs SUPERSEDE the §1
   agent-model `vad_stop_secs` / `vad_confidence` columns.
-- Full plan + diffs: `pipesong/docs/upgrade-flux-pipecat1x-2026-06-17.md`. **Status: PREPARED,
-  not applied;** gated on Python 3.11+, the `4a.6` baseline, and the WER A/B.
+- Full plan + diffs: `pipesong/docs/upgrade-flux-pipecat1x-2026-06-17.md`. **Status: APPLIED on
+  branch `flux-pipecat1x` (commit `365d221`, pushed) — UNVALIDATED, NOT merged/deployed.**
+  Syntax-checked + qa-audited only (no GPU, pipecat 1.x not installed, no test suite here).
+  **Blocking merge gate C1:** Telnyx sends 8 kHz PCMU but every Flux example uses 16 kHz —
+  must confirm Flux accepts 8 kHz `linear16` on the box or the STT socket won't open. Also
+  gated on Python 3.11+, the `4a.6` baseline, and the Flux-multi vs Nova-3-es WER A/B.
 
 ### 7.4 Corrections to Jarvis's mission-control answer (do NOT propagate its errors)
 
