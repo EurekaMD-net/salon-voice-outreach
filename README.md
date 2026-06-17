@@ -38,6 +38,9 @@ banned on the first send. That lesson is the founding constraint of this repo �
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — full system design (orchestrator,
   conversation flow, data model, compliance-by-design, telephony, cost, phased build).
+- [`docs/PIPESONG-NOTES.md`](docs/PIPESONG-NOTES.md) — the voice engine's real contract,
+  constraints, gaps this repo must fill, and Spanish/TTS learnings (verified against
+  pipesong code 2026-06-17). Read before building the orchestrator.
 
 ## Guardrails (compliance-by-design, day 1)
 
