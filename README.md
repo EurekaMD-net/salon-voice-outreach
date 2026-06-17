@@ -4,9 +4,13 @@ Voice-first outbound acquisition engine for **Gilda** (gilda.mx) — reaching CD
 salon / barber / nail owners at scale and routing interested owners into the
 **inbound** WhatsApp funnel that closes them.
 
-> **Status:** design phase (2026-06-17). This repo holds the architecture and
-> conversation design first; the orchestrator implementation follows. Private by
-> design — it will touch prospect PII.
+> **Status (2026-06-17):** design complete; **build underway**. Orchestrator Stage 1 —
+> the capture spine + fail-closed guardrails/kill-switch (inc 1) and the pipesong-agnostic
+> dialer core (inc 2: `PipesongClient` port + state machine + pacing loop + stuck-dialing
+> reaper) — shipped & QA-gated, **67 tests**. The pipesong-coupled parts (webhook→outcome
+> handler, agent registration + handoff) wait for the in-flight pipesong Pipecat-1.x/Flux
+> upgrade to merge to `main` (currently on an unvalidated branch; watched). Private — it
+> touches prospect PII.
 
 ## The load-bearing decision
 
