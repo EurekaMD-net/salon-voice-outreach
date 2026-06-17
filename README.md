@@ -44,6 +44,9 @@ banned on the first send. That lesson is the founding constraint of this repo �
 - [`docs/PIPESONG-NOTES.md`](docs/PIPESONG-NOTES.md) — the voice engine's real contract,
   constraints, gaps this repo must fill, and Spanish/TTS learnings (verified against
   pipesong code 2026-06-17). Read before building the orchestrator.
+- [`docs/SPEC-STAGE1-ORCHESTRATOR.md`](docs/SPEC-STAGE1-ORCHESTRATOR.md) — **the current
+  build spec.** Stage 1 ("The Pipe"): capture-first data model, state machine, pacing
+  loop, pipesong contract, the ban-safe handoff, guardrails, acceptance criteria.
 
 ## Guardrails (compliance-by-design, day 1)
 
