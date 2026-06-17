@@ -4,13 +4,16 @@ Voice-first outbound acquisition engine for **Gilda** (gilda.mx) — reaching CD
 salon / barber / nail owners at scale and routing interested owners into the
 **inbound** WhatsApp funnel that closes them.
 
-> **Status (2026-06-17):** design complete; **build underway**. Orchestrator Stage 1 —
-> the capture spine + fail-closed guardrails/kill-switch (inc 1) and the pipesong-agnostic
-> dialer core (inc 2: `PipesongClient` port + state machine + pacing loop + stuck-dialing
-> reaper) — shipped & QA-gated, **67 tests**. The pipesong-coupled parts (webhook→outcome
-> handler, agent registration + handoff) wait for the in-flight pipesong Pipecat-1.x/Flux
-> upgrade to merge to `main` (currently on an unvalidated branch; watched). Private — it
-> touches prospect PII.
+> **Status (2026-06-17):** design complete; **build underway**.
+> **Orchestrator Stage 1** — capture spine + fail-closed guardrails/kill-switch (inc 1)
+> and the pipesong-agnostic dialer core (inc 2: `PipesongClient` port + state machine +
+> pacing loop + stuck-dialing reaper) — shipped & QA-gated, **67 tests**.
+> **vlcrm Stage 1 inc 1** — the lead-intake spine: 4-table pipeline of record, the
+> agnostic `LeadEvent` ingest port, and the operator sales-phone manual-intake route with
+> structured **referral** capture — shipped & QA-gated, **47 tests**.
+> The pipesong-coupled parts (webhook→outcome handler, agent registration + handoff) wait
+> for the in-flight pipesong Pipecat-1.x/Flux upgrade to merge to `main` (currently on an
+> unvalidated branch; watched). Private — it touches prospect PII.
 
 ## The load-bearing decision
 
@@ -30,13 +33,13 @@ banned on the first send. That lesson is the founding constraint of this repo �
 
 ## How the pieces fit
 
-| Component       | Role                                                                                                    | Where             |
-| --------------- | ------------------------------------------------------------------------------------------------------- | ----------------- |
-| **pipesong**    | Voice engine (Telnyx PSTN + Deepgram/Qwen/Kokoro, RAG, tools, webhooks, outbound calls) — already built | `kosm1x/pipesong` |
-| **this repo**   | Campaign orchestrator: who to call, pacing, windows, retries, DNC, handoff, CRM wiring                  | —                 |
-| **salones-wa**  | Inbound WhatsApp product bot — the closer                                                               | `salones-wa`      |
-| **agentic-CRM** | Pipeline of record + CPQL attribution by channel                                                        | —                 |
-| **DENUE spine** | ~23k CDMX salon prospects (name, colonia, phone, IG)                                                    | —                 |
+| Component        | Role                                                                                                    | Where             |
+| ---------------- | ------------------------------------------------------------------------------------------------------- | ----------------- |
+| **pipesong**     | Voice engine (Telnyx PSTN + Deepgram/Qwen/Kokoro, RAG, tools, webhooks, outbound calls) — already built | `kosm1x/pipesong` |
+| **orchestrator** | Campaign orchestrator: who to call, pacing, windows, retries, DNC, handoff, CRM wiring                  | `orchestrator/`   |
+| **salones-wa**   | Inbound WhatsApp product bot — the closer                                                               | `salones-wa`      |
+| **vlcrm**        | Pipeline of record + channel attribution (CPQL); agnostic `LeadEvent` port + sales-phone intake         | `vlcrm/`          |
+| **DENUE spine**  | ~23k CDMX salon prospects (name, colonia, phone, IG)                                                    | —                 |
 
 ## Docs
 
