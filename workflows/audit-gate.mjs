@@ -175,8 +175,12 @@ Read the cited code and its surrounding context. Decide: is this REAL, or a fals
     return parallel(Array.from({ length: n }, (_, i) => () => refute(i))).then((votes) => {
       const live = votes.filter(Boolean)
       const real = live.filter((v) => v.isReal).length
-      const survives = real >= Math.ceil(n / 2) && live.length > 0
-      return { ...f, verdict: { real, of: n, survives, votes: live } }
+      // Fail CLOSED: if NO skeptic ran (all refuters errored), the finding is INCONCLUSIVE,
+      // not refuted — KEEP it (flagged) so an infra outage can never silently erase a real
+      // finding. Only a finding a live skeptic actually voted down is dropped.
+      const verifierFailed = live.length === 0
+      const survives = verifierFailed || real >= Math.ceil(n / 2)
+      return { ...f, verdict: { real, of: n, survives, verifierFailed, votes: live } }
     })
   }),
 )
@@ -190,7 +194,8 @@ phase('Synthesize')
 const bySeverity = { Critical: [], Warning: [], Info: [] }
 for (const f of confirmed) (bySeverity[f.severity] ?? bySeverity.Info).push(f)
 
-log(`confirmed ${confirmed.length} (C:${bySeverity.Critical.length} W:${bySeverity.Warning.length} I:${bySeverity.Info.length}), dropped ${dropped.length} as false-positive`)
+const unverified = confirmed.filter((f) => f.verdict.verifierFailed).length
+log(`confirmed ${confirmed.length} (C:${bySeverity.Critical.length} W:${bySeverity.Warning.length} I:${bySeverity.Info.length}${unverified ? `, ${unverified} kept UNVERIFIED — refuters errored` : ''}), dropped ${dropped.length} as false-positive`)
 
 return {
   verdict: bySeverity.Critical.length ? 'block' : confirmed.length ? 'review' : 'clean',
@@ -198,6 +203,7 @@ return {
     raw: raw.length,
     deduped: deduped.length,
     confirmed: confirmed.length,
+    unverified,
     dropped: dropped.length,
     critical: bySeverity.Critical.length,
     warning: bySeverity.Warning.length,
