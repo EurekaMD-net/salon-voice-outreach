@@ -8,12 +8,16 @@ salon / barber / nail owners at scale and routing interested owners into the
 > **Orchestrator Stage 1** — capture spine + fail-closed guardrails/kill-switch, the
 > pipesong-agnostic dialer core (`PipesongClient` port + state machine + pacing loop +
 > reaper), and the **CRM emitter** (`CrmClient` port + outbox pump: every finalized
-> `call_attempt` drains to vlcrm at-least-once) — shipped & QA-gated, **93 tests**.
+> `call_attempt` drains to vlcrm at-least-once) — shipped & QA-gated, **97 tests**.
 > **vlcrm Stage 1** — the lead-intake spine (4-table pipeline of record, agnostic
 > `LeadEvent` ingest port, sales-phone manual intake with structured **referral**), plus
 > the **CPQL rollup** (`GET /metrics/cpql`: cost-per-qualified-lead + cost-by-channel +
-> qualified-by-source) — shipped & QA-gated, **56 tests**.
+> qualified-by-source) — shipped & QA-gated, **70 tests**.
 > **The two services now talk** (orchestrator → `LeadEvent` → vlcrm → CPQL), all in-repo.
+> The loop was then **hardened** against 6 findings from a multi-lens `audit-gate` pass
+> (boot-crash migration, constant-time auth, whitespace poison-pill, DNC suppression,
+> exactly-once `refId` dedup, automated cross-service contract test) — see
+> `docs/AUDIT-GATE-FINDINGS-2026-06-18.md`.
 > The pipesong-coupled parts (webhook→outcome handler, agent registration + handoff) wait
 > for the in-flight pipesong Pipecat-1.x/Flux upgrade to merge to `main` (currently on an
 > unvalidated branch; watched). Private — it touches prospect PII.

@@ -150,4 +150,40 @@ describe("syncPendingLeads (outbox pump)", () => {
     expect(e.accountKey).toMatch(/^\+52/);
     expect(e.source).toBe("denue");
   });
+
+  it("excludes a whitespace-only phone (trim guard matches the consumer's reject)", async () => {
+    // A bare `<> ''` would pass '   ' but vlcrm rejects it via reqStr's .trim() — a
+    // poison-pill. The trim guard must exclude it AND not block a healthy row.
+    const badPid = randomUUID();
+    db.prepare(
+      "INSERT INTO prospect (id, name, phone_e164, source) VALUES (?, ?, ?, ?)",
+    ).run(badPid, "Spaces", "   ", "denue-pilot");
+    db.prepare(
+      "INSERT INTO call_attempt (id, prospect_id, campaign_id, disposition) VALUES (?, ?, ?, ?)",
+    ).run(randomUUID(), badPid, "camp-1", "connected");
+    seedAttempt(db, { disposition: "connected" }); // healthy
+
+    const crm = new FakeCrmClient();
+    const r = await syncPendingLeads(db, cfg, crm);
+    expect(r.synced).toBe(1);
+    expect(crm.events).toHaveLength(1);
+    expect(crm.events[0]!.accountKey.trim()).not.toBe("");
+    const bad = db
+      .prepare("SELECT crm_synced_at FROM call_attempt WHERE prospect_id = ?")
+      .get(badPid) as { crm_synced_at: string | null };
+    expect(bad.crm_synced_at).toBeNull(); // stays unsynced, never poison-pills
+  });
+
+  it("trims surrounding whitespace off the emitted accountKey (guard = wire = validator)", async () => {
+    const pid = randomUUID();
+    db.prepare(
+      "INSERT INTO prospect (id, name, phone_e164, source) VALUES (?, ?, ?, ?)",
+    ).run(pid, "Padded", "  +5215512349999  ", "denue-pilot");
+    db.prepare(
+      "INSERT INTO call_attempt (id, prospect_id, campaign_id, disposition) VALUES (?, ?, ?, ?)",
+    ).run(randomUUID(), pid, "camp-1", "qualified");
+    const crm = new FakeCrmClient();
+    await syncPendingLeads(db, cfg, crm);
+    expect(crm.events[0]!.accountKey).toBe("+5215512349999");
+  });
 });

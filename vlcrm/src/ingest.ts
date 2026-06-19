@@ -27,6 +27,28 @@ export interface IngestResult {
  */
 export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
   const tx = db.transaction((): IngestResult => {
+    // --- exactly-once: the orchestrator outbox is at-least-once (a crash between
+    // emit and mark re-delivers the SAME refId). If this refId was already ingested,
+    // the whole event is a no-op — return the prior interaction so interaction cost
+    // and qualified counts never double. (interaction.ref_id has a partial UNIQUE
+    // index as the hard backstop; this check is the clean no-op path.) ---
+    if (event.refId) {
+      const prior = db
+        .prepare("SELECT id, account_id FROM interaction WHERE ref_id = ?")
+        .get(event.refId) as { id: string; account_id: string } | undefined;
+      if (prior) {
+        const acct = db
+          .prepare("SELECT pipeline_stage FROM account WHERE id = ?")
+          .get(prior.account_id) as { pipeline_stage: PipelineStage };
+        return {
+          accountId: prior.account_id,
+          created: false,
+          interactionId: prior.id,
+          stage: acct.pipeline_stage,
+        };
+      }
+    }
+
     // --- resolve referrer: the row holds EITHER an FK to a known account OR free
     // text, never both (one unambiguous representation — avoids attribution
     // double-counting). FK wins when it resolves; otherwise keep name/phone, or
@@ -68,6 +90,13 @@ export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
           "UPDATE account SET name = ?, updated_at = datetime('now') WHERE id = ?",
         ).run(event.name, accountId);
       }
+      // Latch do-not-contact to 1 (never cleared). Unlike provenance, compliance is
+      // NOT set-once: a later dnc event on an already-known account must still suppress.
+      if (event.dnc && existing.dnc === 0) {
+        db.prepare(
+          "UPDATE account SET dnc = 1, updated_at = datetime('now') WHERE id = ?",
+        ).run(accountId);
+      }
     } else {
       accountId = randomUUID();
       created = true;
@@ -75,8 +104,8 @@ export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
       db.prepare(
         `INSERT INTO account
            (id, account_key, name, source,
-            referred_by_account_id, referred_by_name, referred_by_phone, attributes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            referred_by_account_id, referred_by_name, referred_by_phone, attributes, dnc)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         accountId,
         event.accountKey,
@@ -88,6 +117,7 @@ export function ingestLeadEvent(db: DB, event: LeadEvent): IngestResult {
         event.attributes !== undefined
           ? JSON.stringify(event.attributes)
           : null,
+        event.dnc ? 1 : 0,
       );
     }
 

@@ -4,7 +4,11 @@
  * payload verbatim so Stage 2 can mine data we don't yet know we'll want.
  *
  * SQLite notes: ids are app-generated UUIDs (TEXT); booleans are 0/1; JSON is
- * TEXT. All idempotent (`IF NOT EXISTS`) so migrate() is safe to run on every boot.
+ * TEXT. `CREATE TABLE/INDEX IF NOT EXISTS` makes a FRESH boot idempotent — but
+ * `IF NOT EXISTS` is a no-op on an EXISTING table, so it does not add a column
+ * introduced later (e.g. `crm_synced_at`). Such columns are added by an explicit
+ * guarded `ALTER TABLE` in migrate() (db.ts) — that, not `IF NOT EXISTS`, is what
+ * makes migrate() safe on a pre-existing DB.
  *
  * CANONICAL TIMESTAMP FORMAT (QA M2 — decided 2026-06-17): every timestamp column
  * is the SQLite `datetime('now')` form — "YYYY-MM-DD HH:MM:SS", UTC, space-separated,

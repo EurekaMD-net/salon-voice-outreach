@@ -1,5 +1,5 @@
 import { Hono, type MiddlewareHandler } from "hono";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
 import type { DB } from "./db.js";
 import {
   validateLeadEvent,
@@ -25,13 +25,14 @@ function bearerOk(header: string | undefined, apiKey: string): boolean {
   const prefix = "Bearer ";
   if (!header.startsWith(prefix)) return false;
   const token = header.slice(prefix.length);
-  // constant-time compare to avoid leaking length/match via timing
-  if (token.length !== apiKey.length) return false;
-  let diff = 0;
-  for (let i = 0; i < token.length; i++) {
-    diff |= token.charCodeAt(i) ^ apiKey.charCodeAt(i);
-  }
-  return diff === 0;
+  // Constant-time compare over fixed-size SHA-256 digests: hashing first makes the
+  // compared buffers always 32 bytes, so the comparison never branches on the
+  // (attacker-supplied) token length — no length/timing leak, unlike a raw
+  // `length !==` early return + char loop. timingSafeEqual requires equal lengths,
+  // which the digests guarantee.
+  const a = createHash("sha256").update(token).digest();
+  const b = createHash("sha256").update(apiKey).digest();
+  return timingSafeEqual(a, b);
 }
 
 /** Body shape for the operator-facing sales-phone intake form. */

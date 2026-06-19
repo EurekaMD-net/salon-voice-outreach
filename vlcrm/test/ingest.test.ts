@@ -253,4 +253,80 @@ describe("ingestLeadEvent", () => {
       .get(a.id) as { n: number };
     expect(n).toBe(1);
   });
+
+  it("a dnc event latches account.dnc=1 WITHOUT advancing the stage", () => {
+    const r = ingestLeadEvent(
+      db,
+      salesPhoneLead({
+        type: "dnc",
+        outcome: "dnc",
+        dnc: true,
+        channel: "voice",
+        direction: "outbound",
+      }),
+    );
+    expect(r.stage).toBe("new"); // suppressed — NOT advanced into the active pipeline
+    expect(acct(db, "+5215512345678").dnc).toBe(1);
+  });
+
+  it("latches dnc on a later event for a known account (compliance is NOT set-once)", () => {
+    ingestLeadEvent(db, salesPhoneLead()); // account exists, dnc defaults 0
+    expect(acct(db, "+5215512345678").dnc).toBe(0);
+    ingestLeadEvent(
+      db,
+      salesPhoneLead({
+        type: "dnc",
+        dnc: true,
+        channel: "voice",
+        direction: "outbound",
+      }),
+    );
+    expect(acct(db, "+5215512345678").dnc).toBe(1);
+  });
+
+  it("a redelivered refId is an exactly-once no-op (no second interaction, no double cost)", () => {
+    const first = ingestLeadEvent(
+      db,
+      salesPhoneLead({
+        type: "call",
+        channel: "voice",
+        direction: "outbound",
+        refId: "ca-1",
+        costCents: 100,
+      }),
+    );
+    const second = ingestLeadEvent(
+      db,
+      salesPhoneLead({
+        type: "call",
+        channel: "voice",
+        direction: "outbound",
+        refId: "ca-1",
+        costCents: 100,
+      }),
+    );
+    expect(second.created).toBe(false);
+    expect(second.interactionId).toBe(first.interactionId);
+    const a = acct(db, "+5215512345678");
+    const { n, total } = db
+      .prepare(
+        "SELECT COUNT(*) n, COALESCE(SUM(cost_cents),0) total FROM interaction WHERE account_id = ?",
+      )
+      .get(a.id) as { n: number; total: number };
+    expect(n).toBe(1); // only one interaction row
+    expect(total).toBe(100); // cost not doubled
+  });
+
+  it("does NOT dedup ref_id-less events (each logs its own interaction)", () => {
+    ingestLeadEvent(db, salesPhoneLead()); // no refId
+    ingestLeadEvent(
+      db,
+      salesPhoneLead({ type: "call", channel: "voice", direction: "outbound" }),
+    );
+    const a = acct(db, "+5215512345678");
+    const { n } = db
+      .prepare("SELECT COUNT(*) n FROM interaction WHERE account_id = ?")
+      .get(a.id) as { n: number };
+    expect(n).toBe(2);
+  });
 });

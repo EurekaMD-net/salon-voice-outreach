@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "node:crypto";
-import { openDb, type DB } from "../src/db.js";
+import Database from "better-sqlite3";
+import { openDb, migrate, type DB } from "../src/db.js";
 
 describe("schema / capture spine", () => {
   let db: DB;
@@ -86,5 +87,29 @@ describe("schema / capture spine", () => {
 
   it("migrate() is idempotent (safe on every boot)", () => {
     expect(() => openDb(":memory:")).not.toThrow();
+  });
+
+  it("migrate() adds crm_synced_at to a pre-inc-3 call_attempt (no boot crash)", () => {
+    // Reproduce an inc-1/2 DB: call_attempt created WITHOUT crm_synced_at. Pre-fix,
+    // migrate() threw `no such column: crm_synced_at` building ix_call_crm_unsynced,
+    // crashing the service at boot (openDb runs migrate before returning).
+    const legacy = new Database(":memory:");
+    legacy.exec(`CREATE TABLE call_attempt (
+      id TEXT PRIMARY KEY, prospect_id TEXT NOT NULL, campaign_id TEXT NOT NULL,
+      pipesong_call_id TEXT, started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT, duration_s INTEGER, disposition TEXT,
+      optin_sent INTEGER NOT NULL DEFAULT 0, transcript_ref TEXT,
+      recording_ref TEXT, raw TEXT
+    );`);
+    expect(() => migrate(legacy)).not.toThrow();
+    const cols = (
+      legacy.prepare("PRAGMA table_info(call_attempt)").all() as {
+        name: string;
+      }[]
+    ).map((c) => c.name);
+    expect(cols).toContain("crm_synced_at");
+    // running again is a no-op (column already present) — still idempotent.
+    expect(() => migrate(legacy)).not.toThrow();
+    legacy.close();
   });
 });

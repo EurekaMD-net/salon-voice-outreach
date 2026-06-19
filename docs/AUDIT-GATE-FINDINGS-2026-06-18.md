@@ -9,6 +9,11 @@ Verdict: `review` (no Critical). All are **latent** — the service is undeploye
 This is a hardening backlog, not a fire. Notably, several of these were **missed by the
 original per-increment qa-auditor passes** — the value the fan-out + refute pass added.
 
+> **RESOLVED 2026-06-18:** all 6 confirmed loop findings (#1–#6) FIXED, tested, and
+> qa-gated (PASS) in the same session — orchestrator 97 tests, vlcrm 70 = **167**. The
+> gate's own finding #7 (fail-open verify) was fixed in `0e82b83`. The table below is the
+> historical record of what the first gate run found.
+
 ## Confirmed — hardening backlog
 
 | #   | Sev  | File                                   | Defect                                                                                                                                                                                                                                                                         | Fix                                                                                                                                                                                        |

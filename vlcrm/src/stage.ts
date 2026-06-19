@@ -47,6 +47,8 @@ export function impliedStage(eventType: string): PipelineStage | null {
       return "new";
     case "call_attempt": // an outbound try with NO human reached (no_answer/
       return null; //       voicemail/failed) — logged, but never counts as contact
+    case "dnc": // do-not-contact: logged + latches account.dnc=1, but must NOT
+      return null; //   advance a suppressed prospect into the active pipeline
     case "manual_intake": // a human captured them via the sales phone
     case "call":
     case "contacted":

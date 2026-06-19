@@ -35,7 +35,7 @@ export async function syncPendingLeads(
               ca.pipesong_call_id AS pipesong_call_id,
               ca.disposition   AS disposition,
               ca.duration_s    AS duration_s,
-              p.phone_e164     AS phone_e164,
+              TRIM(p.phone_e164) AS phone_e164,
               p.name           AS name,
               p.colonia        AS colonia,
               p.ig_handle      AS ig_handle,
@@ -44,13 +44,16 @@ export async function syncPendingLeads(
          JOIN prospect p ON p.id = ca.prospect_id
         WHERE ca.disposition IS NOT NULL
           AND ca.crm_synced_at IS NULL
-          -- QA W1: exclude un-emittable rows. vlcrm rejects accountKey='' with a
-          -- 400, which would leave the row unsynced and re-rejected forever (a
-          -- poison-pill that can also head-of-line-block a full batch). NOT NULL
-          -- still permits '' in SQLite, so guard it explicitly here. The real fix
-          -- is E.164 validation at the (not-yet-built) prospect import boundary.
+          -- QA W1: exclude un-emittable rows. vlcrm derives accountKey from this
+          -- phone and rejects it via reqStr's trim()==='' check (a 400 -> the row
+          -- stays unsynced and re-rejected forever: a poison-pill that can also
+          -- head-of-line-block the batch). The guard must match the consumer EXACTLY,
+          -- so it trims too: a whitespace-only phone (a single space) passes a bare
+          -- "<> ''" but fails the consumer's trim. We TRIM the SELECTed phone as well,
+          -- so guard = wire accountKey = validator all agree. Real fix: E.164
+          -- validation at the (not-yet-built) prospect import boundary.
           AND p.phone_e164 IS NOT NULL
-          AND p.phone_e164 <> ''
+          AND TRIM(p.phone_e164) <> ''
         ORDER BY ca.started_at ASC, ca.id ASC -- QA R2: stable batch boundaries
         LIMIT ?`,
     )

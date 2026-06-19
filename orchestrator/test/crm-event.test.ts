@@ -31,13 +31,22 @@ describe("buildCrmEvent — disposition mapping", () => {
     expect(e.outcome).toBe("qualified");
   });
 
-  it("human-reached dispositions → 'call' (advances to contacted)", () => {
-    for (const d of ["connected", "declined", "dnc"] as Disposition[]) {
+  it("human-reached (connected/declined) → 'call' (advances to contacted)", () => {
+    for (const d of ["connected", "declined"] as Disposition[]) {
       const e = buildCrmEvent(row({ disposition: d }), cfg);
       expect(e.type).toBe("call");
       expect(e.outcome).toBe(d);
       expect(e.qualification).toBeUndefined();
+      expect(e.dnc).toBeUndefined();
     }
+  });
+
+  it("dnc → type 'dnc' + dnc:true (suppression flag, no stage advance)", () => {
+    const e = buildCrmEvent(row({ disposition: "dnc" }), cfg);
+    expect(e.type).toBe("dnc");
+    expect(e.outcome).toBe("dnc");
+    expect(e.dnc).toBe(true);
+    expect(e.qualification).toBeUndefined();
   });
 
   it("no-human dispositions → 'call_attempt' (no stage advance)", () => {
@@ -45,6 +54,7 @@ describe("buildCrmEvent — disposition mapping", () => {
       const e = buildCrmEvent(row({ disposition: d }), cfg);
       expect(e.type).toBe("call_attempt");
       expect(e.outcome).toBe(d);
+      expect(e.dnc).toBeUndefined();
     }
   });
 

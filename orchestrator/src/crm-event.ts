@@ -25,6 +25,8 @@ export interface CrmLeadEvent {
   payload?: Record<string, unknown>;
   attributes?: Record<string, unknown>;
   qualification?: { interested?: boolean };
+  /** do-not-contact: set when the call outcome was `dnc`; vlcrm latches account.dnc=1. */
+  dnc?: boolean;
 }
 
 /** A finalized call_attempt joined with its prospect — the outbox row shape. */
@@ -45,6 +47,8 @@ export interface CrmSyncRow {
  * Map one disposition to its CRM event type + outcome (+ qualification). The
  * coarse vlcrm stage is driven by `type`:
  *   - human reached / opted in → `call` (advances to "contacted")
+ *   - do-not-contact          → `dnc` (NO stage advance; sets event.dnc → account.dnc=1
+ *     at vlcrm, so a suppressed prospect never sits in the active pipeline)
  *   - qualified               → `qualified` (+ interested:true → "qualified")
  *   - no human (no_answer/voicemail/failed) → `call_attempt` (logged, NO stage
  *     advance — we never reached them; CPQL must not count these as contact)
@@ -59,8 +63,9 @@ function dispositionToType(d: Disposition): {
       return { type: "qualified", interested: true };
     case "connected":
     case "declined":
-    case "dnc":
       return { type: "call" };
+    case "dnc":
+      return { type: "dnc" };
     case "no_answer":
     case "voicemail":
     case "failed":
@@ -115,5 +120,6 @@ export function buildCrmEvent(row: CrmSyncRow, cfg: Config): CrmLeadEvent {
   event.contact = contact;
   if (row.colonia) event.attributes = { colonia: row.colonia };
   if (interested !== undefined) event.qualification = { interested };
+  if (row.disposition === "dnc") event.dnc = true;
   return event;
 }

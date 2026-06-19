@@ -57,6 +57,10 @@ export interface LeadEvent {
    *  account creation, NOT per interaction. */
   attributes?: Record<string, unknown>;
   qualification?: LeadEventQualification;
+  /** do-not-contact signal (e.g. a `dnc` voice outcome). LATCHES account.dnc=1 and is
+   *  never cleared by a later event. Orthogonal to pipeline_stage — a suppressed lead
+   *  must be filterable regardless of stage. */
+  dnc?: boolean;
 }
 
 /** Thrown by validateLeadEvent on any invalid input — the boundary fails CLOSED. */
@@ -161,6 +165,13 @@ export function validateLeadEvent(input: unknown): LeadEvent {
   const outcome = optStr(input.outcome, "outcome");
   if (outcome !== undefined) event.outcome = outcome;
   if (input.payload !== undefined) event.payload = input.payload;
+
+  if (input.dnc !== undefined && input.dnc !== null) {
+    if (typeof input.dnc !== "boolean") {
+      throw new LeadEventError("dnc must be a boolean");
+    }
+    event.dnc = input.dnc;
+  }
 
   if (input.attributes !== undefined && input.attributes !== null) {
     if (!isObj(input.attributes))

@@ -110,4 +110,22 @@ describe("computeCpql", () => {
     );
     expect(computeCpql(db).overall.qualified).toBe(0);
   });
+
+  it("does NOT double-count cost when the same refId is re-delivered (exactly-once)", () => {
+    // the orchestrator outbox is at-least-once: a crash between emit and mark
+    // re-delivers the SAME refId. CPQL (SUM cost) must not inflate on the retry.
+    const e = ev({
+      accountKey: "a",
+      type: "qualified",
+      costCents: 100,
+      refId: "ca-1",
+      qualification: { interested: true },
+    });
+    ingestLeadEvent(db, e);
+    ingestLeadEvent(db, e); // redelivery
+    const r = computeCpql(db);
+    expect(r.overall.qualified).toBe(1);
+    expect(r.overall.costCents).toBe(100); // NOT 200
+    expect(r.overall.cpqlCents).toBe(100);
+  });
 });

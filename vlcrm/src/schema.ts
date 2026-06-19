@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS interaction (
 );
 CREATE INDEX IF NOT EXISTS ix_interaction_account
   ON interaction(account_id, occurred_at DESC);
+-- Exactly-once delivery key: a producer's refId ingests AT MOST once (the orchestrator
+-- outbox is at-least-once and re-delivers on a crash-window). Partial so the many
+-- ref_id-less rows (sales-phone intake, etc.) are exempt — NULLs are not unique.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_interaction_ref
+  ON interaction(ref_id) WHERE ref_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS qualification (
   id                    TEXT PRIMARY KEY,
