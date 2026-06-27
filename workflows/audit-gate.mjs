@@ -12,7 +12,7 @@
  *
  *   Workflow({
  *     scriptPath: "/root/claude/projects/salon-voice-outreach/workflows/audit-gate.mjs",
- *     args: { target: "git diff origin/main...HEAD", paths: ["vlcrm/src", "orchestrator/src"] }
+ *     args: { target: "git diff origin/main...HEAD", paths: ["orchestrator/src"] }
  *   })
  *
  * args (all optional):

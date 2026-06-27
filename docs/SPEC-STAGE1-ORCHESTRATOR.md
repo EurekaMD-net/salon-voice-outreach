@@ -37,7 +37,7 @@ vlcrm.
   SQLite store** (`data/orchestrator.db`). It references `pipesong_call_id` and stores the
   webhook **raw payload (incl. transcript)** for the Stage-2 corpus; recordings stay
   referenced in pipesong's MinIO. No shared Postgres — pipesong is HTTP-only.
-- **vlcrm** — `vlcrm/` — **TypeScript / Hono + SQLite** (same methodology), the pipeline of
+- **vlcrm** — `EurekaMD-net/vlcrm` (own repo) — **TypeScript / Hono + SQLite** (same methodology), the pipeline of
   record + human workspace + CPQL. Consumes lifecycle events from the orchestrator over a
   thin idempotent HTTP seam. (See ARCHITECTURE for the seam contract.)
 - **GPU:** reuse pipesong's RTX-4090 for the minimum-stack test → Stage 1 concurrency cap
@@ -279,7 +279,7 @@ registration) land last, after the contract re-verifies.
 4. ⬜ **Salon-opener agent + handoff** — register agent; `send_whatsapp_optin`/`mark_dnc`
    tools; `/handoff/optin` → SMS `wa.me`. The real `HttpPipesongClient` adapter lands here.
 5. ⬜ **Answer-rate monitor** (§8) — scheduled job, built + verified to actually fire.
-6. ⬜ **vlcrm** — lead-event consumer + CPQL (separate `vlcrm/` service).
+6. ⬜ **vlcrm** — lead-event consumer + CPQL (separate service, `EurekaMD-net/vlcrm`).
 
 ---
 
@@ -299,7 +299,7 @@ registration) land last, after the contract re-verifies.
 - Telnyx → **single vendor (voice + MX SMS), SMS behind a swappable adapter.** ✓
 - Orchestrator language/placement → **TypeScript, in-repo `orchestrator/`, own SQLite,
   pipesong HTTP-only.** ✓
-- CRM → **new in-repo `vlcrm/` (TS/Hono+SQLite, very-light); the media CRM is out of scope.** ✓
+- CRM → **new in-repo `vlcrm/` (TS/Hono+SQLite, very-light); the media CRM is out of scope.** ✓ _(later extracted to its own repo `EurekaMD-net/vlcrm` — 2026-06-27; see `docs/vlcrm-extraction-rewire-plan.md`.)_
 
 **Still open (real work, not decisions):** MX A2P SMS registration (lead-time — start now)
 and acquiring MX local DID(s) — today's pipesong DID is US; pilot a few live MX calls first,

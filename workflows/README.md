@@ -3,7 +3,7 @@
 Claude Code **Workflow** scripts — deterministic multi-agent orchestrations for this repo.
 They run inside the Claude Code Workflow runtime (the `agent` / `parallel` / `phase` / `log`
 / `args` globals), **not** Node directly. They are plain ESM (`.mjs`), not TypeScript, and
-sit outside the `orchestrator/` and `vlcrm/` packages (no effect on their builds/tests).
+sit outside the `orchestrator/` package (no effect on its build/tests).
 
 > Running a workflow spawns multiple subagents and **costs tokens** — it is an explicit,
 > opt-in action. Authoring/committing one (what lives here) does not.
@@ -28,7 +28,7 @@ Workflow({
     "/root/claude/projects/salon-voice-outreach/workflows/audit-gate.mjs",
   args: {
     target: "git diff origin/main...HEAD", // optional — how reviewers find the diff
-    paths: ["vlcrm/src", "orchestrator/src"], // optional — scope
+    paths: ["orchestrator/src"], // optional — scope
     context: "Increment N: the SMS handoff bridge", // optional — extra context for reviewers
   },
 });
