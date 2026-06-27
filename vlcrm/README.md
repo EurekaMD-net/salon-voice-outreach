@@ -77,7 +77,7 @@ so a no-answer that advanced to "contacted" never inflates the denominator).
 ```bash
 npm install
 npm run typecheck      # tsc --noEmit
-npx vitest run test/   # 56 tests
+npx vitest run test/   # 70 tests
 ```
 
 > Status: Stage 1 increment 1. No server entrypoint / deploy yet (no listener;
