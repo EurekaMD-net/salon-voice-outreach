@@ -1,10 +1,7 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildCrmEvent,
-  type CrmSyncRow,
-} from "../../orchestrator/src/crm-event.js";
-import type { Disposition } from "../../orchestrator/src/types.js";
-import { validateLeadEvent } from "../src/lead-event.js";
+import { buildCrmEvent, type CrmSyncRow } from "../src/crm-event.js";
+import type { Disposition } from "../src/types.js";
+import { validateLeadEvent } from "vlcrm";
 
 /**
  * CROSS-SERVICE CONTRACT TEST (the seam the outbox poison-pill would live in).
@@ -14,6 +11,14 @@ import { validateLeadEvent } from "../src/lead-event.js";
  * pass — so a field rename / enum tighten / nullability change on either side would
  * 400 in production while both unit suites stayed green (audit-gate finding #6). This
  * runs the real producer output through the real consumer validator, mechanically.
+ *
+ * vlcrm now lives in its own repo (EurekaMD-net/vlcrm); the consumer-side validator is
+ * imported from the `vlcrm` package (git devDependency). This test belongs here — at
+ * the orchestrator (the consumer/producer of the seam) — not inside vlcrm, which is
+ * channel-agnostic and knows nothing about this producer.
+ *
+ * NOTE: this validates against the vlcrm version PINNED in package-lock, not the live
+ * deployed service. Drift on vlcrm's `main` only surfaces here after `npm update vlcrm`.
  */
 
 // buildCrmEvent only reads voiceCostPerMinuteCents (via callCostCents).

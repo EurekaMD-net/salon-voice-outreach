@@ -26,7 +26,7 @@ export class FakeCrmClient implements CrmClient {
 
 /**
  * Concrete adapter: POST the event to vlcrm `POST /events`. This contract is
- * OURS (both services in-repo, stable) — unlike the in-flux pipesong seam, so
+ * OURS (we own both sides of this seam, stable) — unlike the in-flux pipesong seam, so
  * the concrete adapter ships now. Throws on a non-2xx so the pump retries.
  */
 export class HttpCrmClient implements CrmClient {

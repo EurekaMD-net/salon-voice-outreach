@@ -4,16 +4,18 @@ Voice-first outbound acquisition engine for **Gilda** (gilda.mx) — reaching CD
 salon / barber / nail owners at scale and routing interested owners into the
 **inbound** WhatsApp funnel that closes them.
 
-> **Status (2026-06-17):** design complete; **build underway**.
+> **Status (2026-06-27):** design complete; **build underway**.
 > **Orchestrator Stage 1** — capture spine + fail-closed guardrails/kill-switch, the
 > pipesong-agnostic dialer core (`PipesongClient` port + state machine + pacing loop +
 > reaper), and the **CRM emitter** (`CrmClient` port + outbox pump: every finalized
-> `call_attempt` drains to vlcrm at-least-once) — shipped & QA-gated, **97 tests**.
-> **vlcrm Stage 1** — the lead-intake spine (4-table pipeline of record, agnostic
-> `LeadEvent` ingest port, sales-phone manual intake with structured **referral**), plus
-> the **CPQL rollup** (`GET /metrics/cpql`: cost-per-qualified-lead + cost-by-channel +
-> qualified-by-source) — shipped & QA-gated, **70 tests**.
-> **The two services now talk** (orchestrator → `LeadEvent` → vlcrm → CPQL), all in-repo.
+> `call_attempt` drains to vlcrm at-least-once) — shipped & QA-gated, **106 tests**
+> (includes the cross-service contract test against vlcrm's validator).
+> **vlcrm** — the lead-intake spine (4-table pipeline of record, agnostic `LeadEvent`
+> ingest port, sales-phone manual intake with structured **referral**) + the **CPQL
+> rollup** (`GET /metrics/cpql`) — now lives in its **own repo** (`EurekaMD-net/vlcrm`).
+> **The two services talk over HTTP** (orchestrator → `POST /events` → vlcrm → CPQL); the
+> orchestrator also consumes `vlcrm` as a git devDependency for the contract test.
+> Extracted 2026-06-27 — see `docs/vlcrm-extraction-rewire-plan.md`.
 > The loop was then **hardened** against 6 findings from a multi-lens `audit-gate` pass
 > (boot-crash migration, constant-time auth, whitespace poison-pill, DNC suppression,
 > exactly-once `refId` dedup, automated cross-service contract test) — see
@@ -40,13 +42,13 @@ banned on the first send. That lesson is the founding constraint of this repo �
 
 ## How the pieces fit
 
-| Component        | Role                                                                                                    | Where             |
-| ---------------- | ------------------------------------------------------------------------------------------------------- | ----------------- |
-| **pipesong**     | Voice engine (Telnyx PSTN + Deepgram/Qwen/Kokoro, RAG, tools, webhooks, outbound calls) — already built | `kosm1x/pipesong` |
-| **orchestrator** | Campaign orchestrator: who to call, pacing, windows, retries, DNC, handoff, CRM wiring                  | `orchestrator/`   |
-| **salones-wa**   | Inbound WhatsApp product bot — the closer                                                               | `salones-wa`      |
-| **vlcrm**        | Pipeline of record + channel attribution (CPQL); agnostic `LeadEvent` port + sales-phone intake         | `vlcrm/`          |
-| **DENUE spine**  | ~23k CDMX salon prospects (name, colonia, phone, IG)                                                    | —                 |
+| Component        | Role                                                                                                    | Where                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| **pipesong**     | Voice engine (Telnyx PSTN + Deepgram/Qwen/Kokoro, RAG, tools, webhooks, outbound calls) — already built | `kosm1x/pipesong`               |
+| **orchestrator** | Campaign orchestrator: who to call, pacing, windows, retries, DNC, handoff, CRM wiring                  | `orchestrator/`                 |
+| **salones-wa**   | Inbound WhatsApp product bot — the closer                                                               | `salones-wa`                    |
+| **vlcrm**        | Pipeline of record + channel attribution (CPQL); agnostic `LeadEvent` port + sales-phone intake         | `EurekaMD-net/vlcrm` (own repo) |
+| **DENUE spine**  | ~23k CDMX salon prospects (name, colonia, phone, IG)                                                    | —                               |
 
 ## Docs
 
